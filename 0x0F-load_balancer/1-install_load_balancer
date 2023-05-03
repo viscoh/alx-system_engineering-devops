@@ -1,27 +1,36 @@
 #!/usr/bin/env bash
-# Create a script to install and configure HAProxy on lb-01 server
-# Configure HAProxy to send traffic to web-01 and web-02 servers
-# Distribute requests using a roundrobin algorithm
-# Make sure that HAProxy can be managed via an init script
-# Install and configure HAproxy on my lb-01 server.
-sudo apt-get -y update
-apt-get -y install haproxy
 
-# edit config file
-server_config=\
-"
-frontend ehoneah_frontend
-        bind *:80
-        mode http
-        default_backend ehoneah_backend
-backend ehoneah_backend
-        balance roundrobin
-        server 63210-web-01 100.25.19.204:80 check
-        server 63210-web-02 54.157.159.85:80 check
-"
-echo "$server_config" | sudo tee -a /etc/haproxy/haproxy.cfg
+# Update the package index and install HAproxy
+sudo apt update
+sudo apt install haproxy -y
 
-# enable haproxy to be started by init script
-echo "ENABLED=1" | sudo tee -a /etc/default/haproxy
+# Configure HAproxy to send traffic to web-01 and web-02 using roundrobin algorithm
+sudo tee /etc/haproxy/haproxy.cfg > /dev/null <<EOT
+frontend http_front
+   bind *:80
+   mode http
+   default_backend http_back
 
-sudo service haproxy restart
+backend http_back
+   balance roundrobin
+   server [STUDENT_ID]-web-01 [STUDENT_ID]-web-01:80 check
+   server [STUDENT_ID]-web-02 [STUDENT_ID]-web-02:80 check
+EOT
+
+# Verify the HAproxy configuration
+sudo haproxy -c -f /etc/haproxy/haproxy.cfg
+
+# Configure HAproxy to be managed via an init script
+sudo tee /etc/default/haproxy > /dev/null <<EOT
+ENABLED=1
+EOT
+
+# Start and enable the HAproxy service
+sudo systemctl start haproxy
+sudo systemctl enable haproxy
+
+# Update the hostname to match the requirements
+sudo hostnamectl set-hostname [STUDENT_ID]-lb-01
+
+# Reboot the machine to apply the changes
+sudo reboot
