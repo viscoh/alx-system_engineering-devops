@@ -1,15 +1,34 @@
 #!/usr/bin/env bash
-
-# Install Nginx
+# Configure Nginx so that its HTTP response contains a custom header (on web-01 and web-02)
+# The name of the custom HTTP header must be X-Served-By
+# The value of the custom HTTP header must be the hostname of the server Nginx is running on
 sudo apt-get update
-sudo apt-get install -y nginx
+sudo apt-get -y install nginx
 
-# Define a variable to hold the hostname
+# configure firewall to allow request through port 80
+sudo ufw allow 'Nginx HTTP'
+
+sudo mkdir -p /var/www/html
+
+# change permissions to allow us to easily create files in this directory
+sudo chmod -R 755 /var/www
+
+#  create the index page
+echo 'Hello World!' | sudo tee /var/www/html/index.html
+
+# create a webpage for error 404
+echo "Ceci n'est pas une page" | sudo tee /var/www/html/404.html
+
+# define a variable to hold the hostname
 hostname=$(hostname)
 
-# Configure Nginx to include a custom HTTP header with the hostname
-sudo sed -i "/http {/a \        set \$server_name ${hostname};\n" /etc/nginx/nginx.conf
-sudo sed -i "/server {/a \        add_header X-Served-By \$server_name;\n" /etc/nginx/sites-available/default
+# code to configure custom header in HTTP response
+string_for_replacement="\tadd_header X-Served-By \$hostname;"
+sudo sed -i "/server_name _;/a $string_for_replacement" /etc/nginx/sites-enabled/default
 
-# Restart Nginx
+# code to configure redirect for 404 error page
+string_for_replacement="\terror_page 404 \/404.html;\n\tlocation = \/404.html {\n\t\troot \/var\/www\/html;\n\t\tinternal;\n\t}"
+sudo sed -i "s/error_page 404 \/404.html;/$string_for_replacement/" /etc/nginx/sites-enabled/default
+
+# restart the web server after updating the settings
 sudo systemctl restart nginx
