@@ -1,28 +1,27 @@
 #!/usr/bin/env bash
-# Create a script to install and configure HAProxy on lb-01 server
-# Configure HAProxy to send traffic to web-01 and web-02 servers
-# Distribute requests using a roundrobin algorithm
-# Make sure that HAProxy can be managed via an init script
-# Install and configure HAproxy on my lb-01 server.
-sudo apt-get -y update
-apt-get -y install haproxy
 
-# edit config file
-server_config=\
-"
-frontend  ehoneah-frontend
-        bind *:80
-        mode http
-        default_backend ehoneah-backend
-backend ehoneah-backend
-        balance roundrobin
-        server 63210-web-01 100.25.19.204:80 check
-        server 63210-web-02 54.157.159.85:80 check
-"
-echo "$server_config" | sudo tee -a /etc/haproxy/haproxy.cfg
+# Update the package list
+sudo apt-get update
 
-# enable haproxy to be started by init script
+# Install Nginx
+sudo apt-get install nginx -y
 
-echo "ENABLED=1" | sudo tee -a /etc/default/haproxy
+# Configure Nginx as a load balancer
+sudo rm /etc/nginx/sites-enabled/default
+sudo chmod -R 777 /etc/nginx/sites-available
+sudo touch /etc/nginx/sites-available/load-balancer
+sudo ln -s /etc/nginx/sites-available/load-balancer /etc/nginx/sites-enabled/load-balancer
+sudo echo "upstream backend {
+    server 54.208.180.150;
+        server 100.25.137.136;
+    }
 
-sudo service haproxy restart
+server {
+    listen 80;
+        location / {
+	        proxy_pass http://backend;
+		    }
+    }" > /etc/nginx/sites-available/load-balancer
+
+# Restart Nginx
+sudo systemctl restart nginx
