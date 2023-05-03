@@ -3,7 +3,7 @@
 # Update the package index and install HAproxy
 sudo apt update
 sudo apt install haproxy -y
-
+chmod u+w haproxy.cfg
 # Configure HAproxy to send traffic to web-01 and web-02 using roundrobin algorithm
 sudo tee /etc/haproxy/haproxy.cfg > /dev/null <<EOT
 frontend http_front
